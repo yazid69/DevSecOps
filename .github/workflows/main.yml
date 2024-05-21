@@ -8,6 +8,10 @@ on:
     branches:
       - "*"
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -40,7 +44,6 @@ jobs:
                 issue_number: pr.number,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                body:'👋 Thanks for using git script!'
-
+                body: '👋 Thanks for using git script!'
               });
             }

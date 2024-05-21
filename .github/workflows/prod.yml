@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -32,10 +36,9 @@ jobs:
             const sha = github.context.sha;
             const url = `${{ needs.deploy.outputs.production_url }}`;
             const message = `Production deployment is ready! [Production URL](${url})`;
-            github.rest.issues.createComment({
+            github.rest.repos.createCommitComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               commit_sha: sha,
               body: '👋 Thanks for using git script!'
-
             });
