@@ -1,0 +1,9 @@
+rules:
+  - id: xss
+    patterns:
+      - pattern: document.write(...)
+      - pattern: document.innerHTML = ...
+      - pattern: element.insertAdjacentHTML(...)
+    message: "Potential XSS"
+    languages: [javascript]
+    severity: ERROR

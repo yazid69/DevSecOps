@@ -20,6 +20,16 @@
 
     <script src="index.js"></script>
 
+    <script>
+        document.getElementById('add-task-btn').addEventListener('click', function () {
+            var userInput = document.getElementById('task-input').value;
+            var newTask = document.createElement('li');
+            newTask.innerHTML = userInput; // Vulnérable à XSS
+            document.getElementById('tasks-ul').appendChild(newTask);
+        });
+    </script>
+
+
 </body>
 
 
