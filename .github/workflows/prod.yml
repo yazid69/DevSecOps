@@ -32,7 +32,7 @@ jobs:
             const sha = github.context.sha;
             const url = `${{ needs.deploy.outputs.production_url }}`;
             const message = `Production deployment is ready! [Production URL](${url})`;
-            github.repos.createCommitComment({
+            github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               commit_sha: sha,
