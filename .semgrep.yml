@@ -4,6 +4,6 @@ rules:
       - pattern: document.write(...)
       - pattern: document.innerHTML = ...
       - pattern: element.insertAdjacentHTML(...)
-    message: "Potential XSS"
+    message: "Erreur de sécurité: XSS possible"
     languages: [javascript]
     severity: ERROR

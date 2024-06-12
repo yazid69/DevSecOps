@@ -4,33 +4,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style.css">
-    <title>DevSecOps Project Commentaire</title>
+    <title>XSS Detection Demo</title>
 </head>
 
 <body>
-    <div id="todo-list">
-        <h1>Todo List</h1>
-        <input type="text" id="task-input" placeholder="Ajouter une tâche...">
-        <button id="add-task-btn">Ajouter</button>
-        <ul id="tasks-ul">
-        </ul>
-    </div>
-    Pull request test
+    <h1>XSS Detection Input</h1>
+    <textarea id="user-input" placeholder="Type some HTML code here..."></textarea>
+    <button onclick="submitCode()">Submit</button>
 
-    <script src="index.js"></script>
+    <div id="result"></div>
 
     <script>
-        document.getElementById('add-task-btn').addEventListener('click', function () {
-            var userInput = document.getElementById('task-input').value;
-            var newTask = document.createElement('li');
-            newTask.innerHTML = userInput; // Vulnérable à XSS
-            document.getElementById('tasks-ul').appendChild(newTask);
-        });
+        function submitCode() {
+            const code = document.getElementById('user-input').value;
+            // Normally you would send this to a server where Semgrep runs
+            console.log("Code submitted for analysis: ", code);
+            // Simulating response (normally you would get this from the server)
+            document.getElementById('result').innerText = 'Code has been submitted for analysis. Check the console for details.';
+        }
     </script>
-
-
 </body>
-
 
 </html>
