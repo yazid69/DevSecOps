@@ -1,23 +1,23 @@
-# name: Semgrep
+name: Semgrep
 
-# on: [push]
+on: [push]
 
-# jobs:
-#   semgrep:
-#     runs-on: ubuntu-latest
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v2
+jobs:
+  semgrep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
       
-#       - name: Install Semgrep
-#         run: pip install semgrep
+      - name: Install Semgrep
+        run: pip install semgrep
 
-#       - name: Run Semgrep scan
-#         run: semgrep --config=.semgrep.yml --error
+      - name: Run Semgrep scan
+        run: semgrep --config=.semgrep.yml --error
 
-#       - name: Upload Semgrep findings
-#         if: failure()
-#         uses: actions/upload-artifact@v2
-#         with:
-#           name: semgrep-results
-#           path: semgrep-results.json
+      - name: Upload Semgrep findings
+        if: failure()
+        uses: actions/upload-artifact@v2
+        with:
+          name: semgrep-results
+          path: semgrep-results.json
