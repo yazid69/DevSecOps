@@ -11,6 +11,8 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    needs: semgrep
+    if: github.event_name == 'pull_request' && needs.semgrep.result == 'success'
 
     steps:
       - name: Checkout code
@@ -19,22 +21,20 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel
 
-      - name: Deploy to Vercel and Extract URL
+      - name: Deploy to Vercel
         run: |
           vercel link --yes --project ${{ secrets.VERCEL_PROJECT_ID }} --scope ${{ secrets.VERCEL_ORG_ID }} --token ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_DEPLOY=$(vercel --cwd ./ --token ${{ secrets.VERCEL_TOKEN }} --confirm)
-          echo "VERCEL_DEPLOY=$VERCEL_DEPLOY"
-          echo "PREVIEW_URL=$(echo "$VERCEL_DEPLOY" | grep -o 'https://[^ ]*' | tail -1)" >> $GITHUB_ENV
+          echo "PREVIEW_URL=$(vercel --cwd ./ --token ${{ secrets.VERCEL_TOKEN }})" >> $GITHUB_ENV
 
-      - name: Comment PR with Vercel URL
+      - name: Add PR comment if XSS error detected
+        if: failure() && steps.semgrep.outputs.xss_error == 'erreur XSS detectée'
         uses: actions/github-script@v6
-        if: success()
         with:
-          github-token: ${{ secrets.GITHUB_USE_TOKEN }}  # Assurez-vous que le nom est correct pour votre token
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             await github.rest.issues.createComment({
               issue_number: context.payload.pull_request.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `Preview URL: ${{ env.PREVIEW_URL }}`
+              body: 'Erreur XSS détectée'
             })
