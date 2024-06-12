@@ -43,5 +43,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               commit_sha: sha,
-              body: message
+              body: '👋 Thanks bro for using git script!'
             });
