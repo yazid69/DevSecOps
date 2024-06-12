@@ -1,9 +1,8 @@
 rules:
-  - id: xss
-    patterns:
-      - pattern: document.write(...)
-      - pattern: $ELEMENT.innerHTML = ...
-      - pattern: element.insertAdjacentHTML(...)
-    message: "Erreur de sécurité: XSS possible"
-    languages: [javascript]
-    severity: ERROR
+- id: xss
+  languages:
+    - javascript
+  message: Possible XSS vulnerability
+  pattern: |
+    $ELEMENT.innerHTML = $X
+  severity: WARNING

@@ -5,11 +5,19 @@ on: [push]
 jobs:
   semgrep:
     runs-on: ubuntu-latest
-    name: Check
     steps:
-    - uses: actions/checkout@v2
-    - name: Semgrep
-      id: semgrep
-      uses: returntocorp/semgrep-action@v1
-      with:
-        configPath: .semgrep.yml
+      - name: Checkout code
+        uses: actions/checkout@v2
+      
+      - name: Install Semgrep
+        run: pip install semgrep
+
+      - name: Run Semgrep scan
+        run: semgrep --config=.semgrep.yml --error
+
+      - name: Upload Semgrep findings
+        if: failure()
+        uses: actions/upload-artifact@v2
+        with:
+          name: semgrep-results
+          path: semgrep-results.json
