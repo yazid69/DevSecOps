@@ -42,6 +42,5 @@ jobs:
             github.rest.repos.createCommitComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              commit_sha: sha,
               body: '👋 Thanks bro for using git script!'
             });
