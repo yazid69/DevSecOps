@@ -25,7 +25,7 @@ jobs:
       - name: Deploy Project to Vercel
         run: |
           vercel --token=${{ secrets.VERCEL_TOKEN }} --confirm
-          echo "$(vercel --token=${{ secrets.VERCEL_TOKEN }} list | grep 'Ready' | head -1 | awk '{print $2}')" > preview_url.txt
+          echo "$(vercel --token=${{ secrets.VERCEL_TOKEN }} list | grep 'Ready' | tail -1 | awk '{print $2}')" > preview_url.txt
       - name: Upload Preview URL
         uses: actions/upload-artifact@v2
         with:
