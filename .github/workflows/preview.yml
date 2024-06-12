@@ -1,9 +1,12 @@
-name: Vercel Production Deployment
+name: Vercel Preview Deployment
 
 on:
-  push:
+  # push:
+    # branches-ignore:
+    #   - main
+  pull_request:
     branches:
-      - main
+      - '*'
 
 permissions:
   contents: read
@@ -13,14 +16,14 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     outputs:
-      production_url: ${{ steps.get_url.outputs.url }}
+      preview_url: ${{ steps.get_url.outputs.url }}
     steps:
       - uses: actions/checkout@v2
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
       - name: Deploy Project to Vercel
-        run: vercel --prod --token=${{ secrets.VERCEL_TOKEN }} --confirm
-      - name: Get Production URL
+        run: vercel --token=${{ secrets.VERCEL_TOKEN }} --confirm
+      - name: Get Preview URL
         id: get_url
         run: echo "::set-output name=url::$(vercel --token=${{ secrets.VERCEL_TOKEN }} list | grep 'Ready' | head -1 | awk '{print $2}')"
 
@@ -28,17 +31,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy
     steps:
-      - name: Comment on commit
+      - name: Comment on PR
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const sha = github.context.sha;
-            const url = `${{ needs.deploy.outputs.production_url }}`;
-            const message = `Production deployment is ready! [Production URL](${url})`;
-            github.rest.repos.createCommitComment({
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              commit_sha: sha,
-              body: '👋 Thanks for using git script!'
-            });
+              body: '👋 Thanks for reporting!'
+            })
