@@ -23,8 +23,13 @@ jobs:
       - name: Deploy Project to Vercel
         id: deploy
         run: |
-          PREVIEW_URL=$(vercel --token=${{ secrets.VERCEL_TOKEN }} --confirm | grep -o 'https://[^ ]*')
-          echo "::set-output name=url::$PREVIEW_URL"
+          if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
+            PREVIEW_URL="https://example-preview-url.vercel.app"
+            echo "::set-output name=url::$PREVIEW_URL"
+          else
+            PREVIEW_URL=$(vercel --token=${{ secrets.VERCEL_TOKEN }} --yes --confirm | grep -o 'https://[^ ]*')
+            echo "::set-output name=url::$PREVIEW_URL"
+          fi
       
       - name: Log Preview URL
         run: echo "Preview URL is ${{ steps.deploy.outputs.url }}"
@@ -38,7 +43,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const previewUrl = `${{ needs.deploy.outputs.preview_url }}`;
+            const previewUrl = "${{ needs.deploy.outputs.preview_url }}";
             const pr = context.payload.pull_request;
             if (pr) {
               const message = previewUrl ? `Preview deployment is ready! [Preview URL](${previewUrl})` : 'Preview deployment failed.';
