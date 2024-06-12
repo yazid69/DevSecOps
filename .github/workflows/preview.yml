@@ -8,9 +8,8 @@ on:
       - main
 
 jobs:
-  deploy:
+  deploy-and-comment:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -18,22 +17,27 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel
 
-      - name: Deploy to Vercel and extract preview URL
-        id: vercel_deploy
+      - name: Deploy to Vercel and Extract URL
+        id: deploy
         run: |
-          VERCEL_DEPLOY_URL=$(vercel --token ${{ secrets.VERCEL_TOKEN }} --confirm | grep -o 'https://[^ ]*')
-          echo "::set-output name=url::$VERCEL_DEPLOY_URL"
+          DEPLOY_OUTPUT=$(vercel --token ${{ secrets.VERCEL_TOKEN }} --confirm)
+          echo "$DEPLOY_OUTPUT"
+          VERCEL_URL=$(echo "$DEPLOY_OUTPUT" | grep -o 'https://[^ ]*')
+          echo "VERCEL_URL=$VERCEL_URL" >> $GITHUB_ENV
+          echo "::set-output name=vercel_url::$VERCEL_URL"
 
-      - name: Post Comment on Pull Request with Vercel Preview URL
+      - name: Post Comment on Pull Request with Vercel URL
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const previewUrl = "${{ steps.vercel_deploy.outputs.url }}";
+            const vercelUrl = "${{ steps.deploy.outputs.vercel_url }}";
+            console.log(`Posting comment with Vercel URL: ${vercelUrl}`);
             await github.rest.issues.createComment({
               issue_number: context.payload.pull_request.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `👋 Your Vercel preview deployment is ready! [View Preview](${previewUrl})`
+              body: `👋 Your Vercel preview deployment is ready! [View Preview](${vercelUrl})`
             })
+
