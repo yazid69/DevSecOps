@@ -39,10 +39,11 @@ jobs:
             const pr = context.payload.pull_request;
             const url = `${{ needs.deploy.outputs.preview_url }}`;
             if (pr) {
+              const message = `Preview deployment is ready! [Preview URL](${url})`;
               github.rest.issues.createComment({
                 issue_number: pr.number,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                body: `👋 Salutation [View Preview](${url})`
+                body: `👋 Thanks for using git script! ${message}`
               });
             }
