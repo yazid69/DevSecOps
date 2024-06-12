@@ -33,6 +33,7 @@ jobs:
   comment:
     runs-on: ubuntu-latest
     needs: deploy
+    if: github.event_name == 'pull_request' && needs.deploy.result == 'success'
     steps:
       - name: Comment on PR
         uses: actions/github-script@v7
@@ -41,11 +42,10 @@ jobs:
           script: |
             const pr = context.payload.pull_request;
             const url = `${{ needs.deploy.outputs.preview_url }}`;
-            if (pr) {
-              github.rest.issues.createComment({
-                issue_number: pr.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: `👋 Your preview deployment is ready! [View Preview](${url})`
-              });
-            }
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `👋 Thanks for using script [View Preview](${url})`
+            });
+            
