@@ -6,60 +6,38 @@ on:
       - main
   pull_request:
     types: [opened, synchronize]
-    branches:
-      - "*"
 
 permissions:
   contents: read
   pull-requests: write
-  issues: write
-  repository-projects: write
 
 jobs:
-  deploy:
+  deploy-and-comment:
     runs-on: ubuntu-latest
-    outputs:
-      url: ${{ steps.deploy.outputs.url }}
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
+
       - name: Install Vercel CLI
         run: npm install --global vercel
-      - name: Deploy Project to Vercel
+
+      - name: Deploy Project to Vercel and capture preview URL
         id: deploy
         run: |
           DEPLOYMENT_URL=$(vercel --token=${{ secrets.VERCEL_TOKEN }} --confirm | grep -o 'https://[^ ]*')
-          echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" > deployment_url.txt
+          echo "Deployment URL: $DEPLOYMENT_URL"
           echo "::set-output name=url::$DEPLOYMENT_URL"
-      - name: Upload Preview URL
-        uses: actions/upload-artifact@v2
-        with:
-          name: preview-url
-          path: deployment_url.txt
 
-  comment:
-    needs: deploy
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download Preview URL
-        uses: actions/download-artifact@v2
-        with:
-          name: preview-url
-      - name: Read URL from file and Post Comment
-        run: |
-          URL=$(cat deployment_url.txt)
-          echo "Posting comment with URL: $URL"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Create Comment
+      - name: Post Comment on Pull Request with Preview URL
+        if: github.event_name == 'pull_request'
         uses: actions/github-script@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const issue_number = context.payload.pull_request.number;
-            const url = "${{ needs.deploy.outputs.url }}"
+            const url = "${{ steps.deploy.outputs.url }}";
             github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issue_number,
+              issue_number: github.event.pull_request.number,
+              owner: github.repository_owner,
+              repo: github.repository,
               body: `👋 Your preview deployment is ready! [View Preview](${url})`
             })
