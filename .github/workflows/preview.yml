@@ -36,9 +36,10 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
+            const previewUrl = ${{ process.env.PREVIEW_URL}};
+            await github.rest.issues.createComment({
+              issue_number: context.payload.pull_request.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '👋 Thanks for reporting!'
+              body: previewURL ? `Preview deployment is ready! [Preview URL](${previewUrl})` : 'Erreur XSS detecté!'
             })
