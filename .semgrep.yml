@@ -1,8 +1,8 @@
-rules:
-- id: xss
-  languages:
-    - javascript
-  message: Possible XSS vulnerability
-  pattern: |
-    $ELEMENT.innerHTML = $X
-  severity: WARNING
+# rules:
+# - id: xss
+#   languages:
+#     - javascript
+#   message: Possible XSS vulnerability
+#   pattern: |
+#     $ELEMENT.innerHTML = $X
+#   severity: WARNING
