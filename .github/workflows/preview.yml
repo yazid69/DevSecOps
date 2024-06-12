@@ -1,43 +1,39 @@
 name: Vercel Preview Deployment
 
 on:
-  push:
-    branches-ignore:
-      - main
   pull_request:
     types: [opened, synchronize]
-
-permissions:
-  contents: read
-  pull-requests: write
+  push:
+    branches:
+      - main
 
 jobs:
-  deploy-and-comment:
+  deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Install Vercel CLI
-        run: npm install --global vercel
+        run: npm install -g vercel
 
-      - name: Deploy Project to Vercel and capture preview URL
-        id: deploy
+      - name: Deploy to Vercel and extract preview URL
+        id: vercel_deploy
         run: |
-          DEPLOYMENT_URL=$(vercel --token=${{ secrets.VERCEL_TOKEN }} --confirm | grep -o 'https://[^ ]*')
-          echo "Deployment URL: $DEPLOYMENT_URL"
-          echo "::set-output name=url::$DEPLOYMENT_URL"
+          VERCEL_DEPLOY_URL=$(vercel --token ${{ secrets.VERCEL_TOKEN }} --confirm | grep -o 'https://[^ ]*')
+          echo "::set-output name=url::$VERCEL_DEPLOY_URL"
 
-      - name: Post Comment on Pull Request with Preview URL
+      - name: Post Comment on Pull Request with Vercel Preview URL
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v2
+        uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const url = "${{ steps.deploy.outputs.url }}";
-            github.rest.issues.createComment({
-              issue_number: github.event.pull_request.number,
-              owner: github.repository_owner,
-              repo: github.repository,
-              body: `👋 Your preview deployment is ready! [View Preview](${url})`
+            const previewUrl = "${{ steps.vercel_deploy.outputs.url }}";
+            await github.rest.issues.createComment({
+              issue_number: context.payload.pull_request.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `👋 Your Vercel preview deployment is ready! [View Preview](${previewUrl})`
             })
