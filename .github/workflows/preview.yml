@@ -44,6 +44,6 @@ jobs:
                 issue_number: pr.number,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                body: `👋 Thanks for using git script! ${message}`
+                body: message
               });
             }
