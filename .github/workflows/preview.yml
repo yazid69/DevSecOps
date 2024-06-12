@@ -1,38 +1,51 @@
-name: Vercel Deployment and Comment
+name: Vercel Preview Deployment
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
   push:
     branches-ignore:
       - main
+  pull_request:
+    branches:
+      - "*"
+
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    outputs:
+      preview_url: ${{ steps.deploy.outputs.url }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-      
+      - uses: actions/checkout@v2
       - name: Install Vercel CLI
-        run: npm install -g vercel
-
-      - name: Vercel Deploy
-        id: vercel-deploy
+        run: npm install --global vercel@latest
+      - name: Deploy Project to Vercel
+        id: deploy
         run: |
-          DEPLOYMENT_OUTPUT=$(vercel --token ${{ secrets.VERCEL_TOKEN }} --prod --scope your-vercel-scope)
+          DEPLOYMENT_OUTPUT=$(vercel --token=${{ secrets.VERCEL_TOKEN }} --prod --json)
           echo "Deployment output: $DEPLOYMENT_OUTPUT"
-          PREVIEW_URL=$(echo "$DEPLOYMENT_OUTPUT" | grep -o "https://[^ ]*vercel.app")
-          echo "::set-output name=preview_url::$PREVIEW_URL"
-      
+          PREVIEW_URL=$(echo "$DEPLOYMENT_OUTPUT" | jq -r '.url')
+          echo "::set-output name=url::$PREVIEW_URL"
+
+  comment:
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
       - name: Comment on PR
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v4
+        uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            github.rest.issues.createComment({
-              issue_number: github.event.pull_request.number,
-              owner: github.repository_owner,
-              repo: github.repository,
-              body: `🚀 Preview URL: ${{ steps.vercel-deploy.outputs.preview_url }}`
-            })
+            const url = "${{ needs.deploy.outputs.preview_characteristics and capabilities via $url }}";
+            const pr = context.payload.pull_request;
+            if (pr) {
+              const message = `🚀 Preview deployment is ready! [View Preview](${url})`;
+              github.rest.issues.createComment({
+                issue_number: pr.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: message
+              });
+            }
