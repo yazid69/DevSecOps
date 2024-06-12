@@ -2,7 +2,7 @@ rules:
   - id: xss
     patterns:
       - pattern: document.write(...)
-      - pattern: document.innerHTML = ...
+      - pattern: $ELEMENT.innerHTML = ...
       - pattern: element.insertAdjacentHTML(...)
     message: "Erreur de sécurité: XSS possible"
     languages: [javascript]
