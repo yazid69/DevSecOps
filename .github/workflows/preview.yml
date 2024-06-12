@@ -36,14 +36,9 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const pr = context.payload.pull_request;
-            const url = `${{ needs.deploy.outputs.preview_url }}`;
-            if (pr) {
-              const message = `Preview deployment is ready! [Preview URL](${url})`;
-              github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner, 
-                repo: context.repo.repo,
-                body: '👋 Thanks for using git script!'
-              });
-            }
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '👋 Thanks for reporting!'
+            })
