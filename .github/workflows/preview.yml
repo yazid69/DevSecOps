@@ -23,14 +23,15 @@ jobs:
       - name: Install Vercel CLI
         run: npm install --global vercel
       - name: Deploy Project to Vercel
+        id: deploy
         run: |
-          vercel --token=${{ secrets.VERCEL_TOKEN }} --confirm
-          echo "$(vercel --token=${{ secrets.VERCEL_TOKEN }} list | grep 'Ready' | tail -1 | awk '{print $2}')" > preview_url.txt
+          DEPLOYMENT_URL=$(vercel --token=${{ secrets.VERCEL_TOKEN }} --confirm | grep -o 'https://[^ ]*')
+          echo "::set-output name=url::$DEPLOYMENT_URL"
       - name: Upload Preview URL
         uses: actions/upload-artifact@v2
         with:
           name: preview-url
-          path: preview_url.txt
+          path: ${{ steps.deploy.outputs.url }}
 
   comment:
     runs-on: ubuntu-latest
@@ -40,20 +41,3 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: preview-url
-      - name: Comment on PR
-        uses: actions/github-script@v5
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs');
-            const pr = context.payload.pull_request;
-            const url = fs.readFileSync('preview_url.txt', 'utf8');
-            if (pr) {
-              const message = `Preview deployment is ready! [Preview URL](${url})`;
-              github.rest.issues.createComment({
-                issue_number: pr.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: message
-              });
-            }
