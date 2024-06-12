@@ -1,9 +1,6 @@
 name: Vercel Preview Deployment
 
 on:
-  # push:
-    # branches-ignore:
-    #   - main
   pull_request:
     branches:
       - '*'
@@ -19,13 +16,18 @@ jobs:
       preview_url: ${{ steps.get_url.outputs.url }}
     steps:
       - uses: actions/checkout@v2
+      
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
+      
       - name: Deploy Project to Vercel
-        run: vercel --token=${{ secrets.VERCEL_TOKEN }} --confirm
-      - name: Get Preview URL
-        id: get_url
-        run: echo "::set-output name=url::$(vercel --token=${{ secrets.VERCEL_TOKEN }} list | grep 'Ready' | head -1 | awk '{print $2}')"
+        id: deploy
+        run: |
+          PREVIEW_URL=$(vercel --token=${{ secrets.VERCEL_TOKEN }} --confirm | grep -o 'https://[^ ]*')
+          echo "::set-output name=url::$PREVIEW_URL"
+      
+      - name: Log Preview URL
+        run: echo "Preview URL is ${{ steps.deploy.outputs.url }}"
 
   comment:
     runs-on: ubuntu-latest
@@ -36,10 +38,14 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const previewUrl = ${{ process.env.PREVIEW_URL}};
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: previewURL ? `Preview deployment is ready! [Preview URL](${previewUrl})` : 'Preview deployment failed.'
-            })
+            const previewUrl = `${{ needs.deploy.outputs.preview_url }}`;
+            const pr = context.payload.pull_request;
+            if (pr) {
+              const message = previewUrl ? `Preview deployment is ready! [Preview URL](${previewUrl})` : 'Preview deployment failed.';
+              await github.rest.issues.createComment({
+                issue_number: pr.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: message
+              });
+            }
