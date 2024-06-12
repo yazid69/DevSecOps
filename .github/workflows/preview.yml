@@ -1,11 +1,12 @@
 name: Deploy Preview and Comment PR
 
 on:
-  pull_request:
-    types: [opened, synchronize]
   push:
     branches-ignore:
       - main
+  pull_request:
+    branches:
+      - '*'
 
 jobs:
   deploy:
@@ -18,17 +19,18 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel
 
-      - name: Deploy to Vercel
+      - name: Deploy to Vercel and Extract URL
         run: |
           vercel link --yes --project ${{ secrets.VERCEL_PROJECT_ID }} --scope ${{ secrets.VERCEL_ORG_ID }} --token ${{ secrets.VERCEL_TOKEN }}
           VERCEL_DEPLOY=$(vercel --cwd ./ --token ${{ secrets.VERCEL_TOKEN }} --confirm)
-          echo "PREVIEW_URL=$(echo $VERCEL_DEPLOY | grep 'https://' | awk '{print $NF}')" >> $GITHUB_ENV
+          echo "VERCEL_DEPLOY=$VERCEL_DEPLOY"
+          echo "PREVIEW_URL=$(echo "$VERCEL_DEPLOY" | grep -o 'https://[^ ]*' | tail -1)" >> $GITHUB_ENV
 
       - name: Comment PR with Vercel URL
         uses: actions/github-script@v6
         if: success()
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_USE_TOKEN }}  # Assurez-vous que le nom est correct pour votre token
           script: |
             await github.rest.issues.createComment({
               issue_number: context.payload.pull_request.number,
