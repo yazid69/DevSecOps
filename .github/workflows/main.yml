@@ -1,53 +1,44 @@
-name: Vercel Deployment and Comment
+name: Deploy and Comment on PR
 
 on:
+  pull_request:
+    types: [opened, synchronize]
   push:
     branches-ignore:
       - main
-  pull_request:
-    types: [opened, synchronize]
-
-permissions:
-  contents: read
-  pull-requests: write
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      
-      - name: Setup Node
+
+      - name: Setup Node.js
         uses: actions/setup-node@v2
-        with:
-          node-version: '18'
-      
+        
       - name: Install dependencies
         run: npm install
-      
+
       - name: Deploy to Vercel
-        id: vercel-deploy
-        uses: amondnet/vercel-action@v20
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-args: '--prod'
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+        id: deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          npm install -g vercel
+          VERCEL_DEPLOY_URL=$(vercel --prod --token ${{ secrets.VERCEL_TOKEN }} | grep "Preview URL" | cut -d' ' -f3)
+          echo "::set-output name=preview_url::$VERCEL_DEPLOY_URL"
 
-      - name: Output deployment URL
-        run: echo "The deployment URL is ${{ steps.vercel-deploy.outputs.preview-url }}"
-
-      - name: Comment on Pull Request
+      - name: Comment PR with preview URL
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v3
+        uses: actions/github-script@v4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const deploymentUrl = "${{ steps.vercel-deploy.outputs.preview-url }}";
+            const previewUrl = ${{ steps.deploy.outputs.preview_url }};
             github.rest.issues.createComment({
               issue_number: github.event.pull_request.number,
               owner: github.repository_owner,
               repo: github.repository,
-              body: `🚀 Deploy preview ready! [View Preview](${deploymentUrl})`
+              body: `Deployed preview is ready! [View Preview](${previewUrl})`
             })
