@@ -1,44 +1,38 @@
-name: Deploy and Comment on PR
+name: Vercel Deployment and Comment
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, reopened]
   push:
     branches-ignore:
       - main
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+      
+      - name: Install Vercel CLI
+        run: npm install -g vercel
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v2
-        
-      - name: Install dependencies
-        run: npm install
-
-      - name: Deploy to Vercel
-        id: deploy
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - name: Vercel Deploy
+        id: vercel-deploy
         run: |
-          npm install -g vercel
-          VERCEL_DEPLOY_URL=$(vercel --prod --token ${{ secrets.VERCEL_TOKEN }} | grep "Preview URL" | cut -d' ' -f3)
-          echo "::set-output name=preview_url::$VERCEL_DEPLOY_URL"
-
-      - name: Comment PR with preview URL
+          DEPLOYMENT_OUTPUT=$(vercel --token ${{ secrets.VERCEL_TOKEN }} --prod --scope your-vercel-scope)
+          echo "Deployment output: $DEPLOYMENT_OUTPUT"
+          PREVIEW_URL=$(echo "$DEPLOYMENT_OUTPUT" | grep -o "https://[^ ]*vercel.app")
+          echo "::set-output name=preview_url::$PREVIEW_URL"
+      
+      - name: Comment on PR
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v4
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const previewUrl = ${{ steps.deploy.outputs.preview_url }};
             github.rest.issues.createComment({
               issue_number: github.event.pull_request.number,
               owner: github.repository_owner,
               repo: github.repository,
-              body: `Deployed preview is ready! [View Preview](${previewUrl})`
+              body: `🚀 Preview URL: ${{ steps.vercel-deploy.outputs.preview_url }}`
             })
