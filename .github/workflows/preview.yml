@@ -1,4 +1,4 @@
-name: Vercel Preview Deployment
+name: GitHub Actions Workflow
 
 on:
   pull_request:
@@ -29,14 +29,13 @@ jobs:
         run: semgrep --config .semgrep.yml --error --metrics=off
 
       - name: Check for XSS errors
-        id: check_xss
         if: failure()
-        run: echo "::set-output name=xss_detected::true"
+        run: echo "erreur XSS detectée" > xss_error.txt
 
   deploy:
     runs-on: ubuntu-latest
     needs: semgrep
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && needs.semgrep.result == 'success'
 
     steps:
       - name: Checkout code
@@ -50,18 +49,15 @@ jobs:
           vercel link --yes --project ${{ secrets.VERCEL_PROJECT_ID }} --scope ${{ secrets.VERCEL_ORG_ID }} --token ${{ secrets.VERCEL_TOKEN }}
           echo "PREVIEW_URL=$(vercel --cwd ./ --token ${{ secrets.VERCEL_TOKEN }})" >> $GITHUB_ENV
 
-      - name: Comment PR with Vercel URL and XSS error
+      - name: Add PR comment if XSS error detected
+        if: failure() && steps.semgrep.outputs.xss_error == 'erreur XSS detectée'
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const xssError = "${{ steps.check_xss.outputs.xss_detected }}"
-            const body = xssError === 'true' ?
-              `Erreur XSS détectée. Prévisualisation: ${{ env.PREVIEW_URL }}` :
-              `Prévisualisation: ${{ env.PREVIEW_URL }}`
             await github.rest.issues.createComment({
               issue_number: context.payload.pull_request.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: body
+              body: 'Erreur XSS détectée'
             })
