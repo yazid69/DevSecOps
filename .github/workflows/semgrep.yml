@@ -1,23 +1,24 @@
-# name: Semgrep
+on:
+  workflow_dispatch: {}
+  pull_request: {}
+  push:
+    branches:
+    - main
+    - master
+    paths:
+    - .github/workflows/semgrep.yml
+  schedule:
+    - cron: 24 11 * * *
 
-# on: [push]
+name: Semgrep
 
-# jobs:
-#   semgrep:
-#     runs-on: ubuntu-latest
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v2
-      
-#       - name: Install Semgrep
-#         run: pip install semgrep
-
-#       - name: Run Semgrep scan
-#         run: semgrep --config=.semgrep.yml --error
-
-#       - name: Upload Semgrep findings
-#         if: failure()
-#         uses: actions/upload-artifact@v2
-#         with:
-#           name: semgrep-results
-#           path: semgrep-results.json
+jobs:
+  semgrep:
+    runs-on: ubuntu-20.04
+    env:
+      SEMGREP_APP_TOKEN: ${{ secrets.SEMGREF_APP_TOKEN }}
+    container:
+      image: returntocorp/semgrep
+    steps:
+    - uses: actions/checkout@v3
+    - run: semgrep ci
