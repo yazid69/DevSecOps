@@ -85,7 +85,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const semgrepOutputStr = "${{ steps.semgrep.outputs.semgrep_output }}".replace(/"/g, "'");
+            const semgrepOutputStr = JSON.stringify("${{ steps.semgrep.outputs.semgrep_output }}");
             const semgrepOutput = JSON.parse(semgrepOutputStr);
             const pr = context.payload.pull_request;
             if (pr) {
