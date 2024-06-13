@@ -1,6 +1,6 @@
 name: Semgrep Scan
 
-on: 
+on:
   pull_request:
     branches:
       - '*'
@@ -12,31 +12,27 @@ permissions:
 jobs:
   semgrep:
     runs-on: ubuntu-latest
+    outputs:
+      xss_detected: ${{ steps.check_xss_errors.outputs.xss_detected }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      
+
       - name: Install Semgrep
         run: pip install semgrep
 
       - name: Run Semgrep scan
         id: semgrep
-        run: |
-          echo "Starting Semgrep scan..."
-          semgrep --config .semgrep.yml --json > semgrep-results.json
-          cat semgrep-results.json
+        run: semgrep --config=p/r2c-security-audit --json > semgrep-results.json
 
       - name: Check for XSS errors
         id: check_xss_errors
         run: |
-          if grep -q "Possible XSS vulnerability detected" semgrep-results.json; then
+          if grep -q "XSS" semgrep-results.json; then
             echo "::set-output name=xss_detected::true"
-            exit 1
           else
             echo "::set-output name=xss_detected::false"
           fi
-          SEMGREP_OUTPUT=$(cat semgrep-results.json)
-          echo "::set-output name=semgrep_output::$SEMGREP_OUTPUT"
 
       - name: Upload Semgrep results
         uses: actions/upload-artifact@v2
@@ -47,7 +43,7 @@ jobs:
   comment:
     runs-on: ubuntu-latest
     needs: semgrep
-    if: always()
+    if: needs.semgrep.outputs.xss_detected == 'true'
     steps:
       - name: Download Semgrep results
         uses: actions/download-artifact@v2
@@ -60,21 +56,15 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
-            const semgrepResults = JSON.parse(fs.readFileSync('semgrep-results.json', 'utf8'));
+            const results = JSON.parse(fs.readFileSync('semgrep-results.json', 'utf8'));
             const pr = context.payload.pull_request;
 
-            let message = '';
-
-            if (semgrepResults.results.length > 0) {
-              message += '## :warning: XSS Vulnerability Detected\n';
-              semgrepResults.results.forEach(result => {
-                if (result.extra.message.includes("Possible XSS vulnerability detected")) {
-                  message += `- File: ${result.path}\n  Line: ${result.start.line}\n  Message: ${result.extra.message}\n\n`;
-                }
-              });
-            } else {
-              message += '✅ Semgrep found no issues.\n\n';
-            }
+            let message = '## :warning: XSS Vulnerability Detected\n';
+            results.results.forEach(result => {
+              if (result.extra.message.includes("XSS")) {
+                message += `- File: ${result.path}\n  Line: ${result.start.line}\n  Message: ${result.extra.message}\n\n`;
+              }
+            });
 
             if (pr) {
               await github.rest.issues.createComment({
