@@ -38,3 +38,24 @@ jobs:
       
       - name: Log Production URL
         run: echo "Production URL is ${{ steps.deploy.outputs.production_url }}"
+
+  comment:
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - name: Comment on Commit
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const productionUrl = "${{ needs.deploy.outputs.production_url }}";
+            const commit = context.sha;
+            if (commit) {
+              const message = productionUrl ? `🚀 Production deployment is ready! Here is the URL: ${productionUrl}` : '⚠️ Production deployment failed.';
+              await github.rest.repos.createCommitComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                commit_sha: commit,
+                body: message
+              });
+            }
