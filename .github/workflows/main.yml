@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
+  issues: write
 
 jobs:
   deploy:
@@ -57,4 +59,3 @@ jobs:
                 commit_sha: commit,
                 body: message
               });
-            }
