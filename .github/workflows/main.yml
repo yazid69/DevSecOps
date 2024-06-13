@@ -1,9 +1,12 @@
 name: Vercel Production Deployment
 
 on:
+  push:
+    branches:
+      - master
   pull_request:
     branches:
-      - main
+      - master
 
 permissions:
   contents: read
@@ -59,4 +62,3 @@ jobs:
                 repo: context.repo.repo,
                 body: message
               });
-            }
