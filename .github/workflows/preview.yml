@@ -13,17 +13,18 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     outputs:
-      preview_url: ${{ steps.extract_url.outputs.url }}
+      preview_url: ${{ steps.deploy.outputs.preview_url }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      
+
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
-      
+
       - name: Deploy Project to Vercel
         id: deploy
         run: |
+          set -e
           echo "Starting deployment..."
           DEPLOYMENT_OUTPUT=$(vercel --token=${{ secrets.VERCEL_TOKEN }} --yes --confirm)
           echo "Deployment output: $DEPLOYMENT_OUTPUT"
@@ -33,11 +34,10 @@ jobs:
             echo "No preview URL found in deployment output"
             exit 1
           fi
-          echo "::set-output name=url::$PREVIEW_URL"
+          echo "::set-output name=preview_url::$PREVIEW_URL"
       
-      - name: Extract Preview URL
-        id: extract_url
-        run: echo "Preview URL is ${{ steps.deploy.outputs.url }}"
+      - name: Log Preview URL
+        run: echo "Preview URL is ${{ steps.deploy.outputs.preview_url }}"
 
   comment:
     runs-on: ubuntu-latest
