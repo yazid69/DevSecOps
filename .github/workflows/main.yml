@@ -3,11 +3,10 @@ name: Vercel Production Deployment
 on:
   push:
     branches:
-      - main
+      - master
 
 permissions:
   contents: read
-  pull-requests: write
 
 jobs:
   deploy:
@@ -25,8 +24,8 @@ jobs:
         id: deploy
         run: |
           set -e
-          echo "Starting production deployment..."
-          DEPLOYMENT_OUTPUT=$(vercel --token=${{ secrets.VERCEL_TOKEN }} --prod --confirm)
+          echo "Starting deployment..."
+          DEPLOYMENT_OUTPUT=$(vercel --prod --token=${{ secrets.VERCEL_TOKEN }} --yes --confirm)
           echo "Deployment output: $DEPLOYMENT_OUTPUT"
           PRODUCTION_URL=$(echo "$DEPLOYMENT_OUTPUT" | grep -o 'https://[^ ]*' | head -n 1)
           echo "Extracted Production URL: $PRODUCTION_URL"
@@ -50,10 +49,12 @@ jobs:
           script: |
             const productionUrl = "${{ needs.deploy.outputs.production_url }}";
             const commit = context.sha;
-            const message = productionUrl ? `🚀 Production deployment is ready! Here is the URL: ${productionUrl}` : '⚠️ Production deployment failed.';
-            await github.rest.repos.createCommitComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              commit_sha: commit,
-              body: message
-            });
+            if (commit) {
+              const message = productionUrl ? `🚀 Production deployment is ready! Here is the URL: ${productionUrl}` : '⚠️ Production deployment failed.';
+              await github.rest.repos.createCommitComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                commit_sha: commit,
+                body: message
+              });
+            }
