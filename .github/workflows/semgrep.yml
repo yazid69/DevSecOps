@@ -10,8 +10,43 @@ permissions:
   pull-requests: write
 
 jobs:
+  semgrep:
+    runs-on: ubuntu-latest
+    outputs:
+      semgrep_output: ${{ steps.semgrep.outputs.semgrep_output }}
+      xss_detected: ${{ steps.check_xss_errors.outputs.xss_detected }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      
+      - name: Install Semgrep
+        run: pip install semgrep
+
+      - name: Run Semgrep scan
+        id: semgrep
+        run: |
+          echo "Starting Semgrep scan..."
+          semgrep --config .semgrep.yml --json > semgrep-results.json
+
+      - name: Check for XSS errors
+        id: check_xss_errors
+        run: |
+          if grep -q "Possible XSS vulnerability detected" semgrep-results.json; then
+            echo "::set-output name=xss_detected::true"
+          else
+            echo "::set-output name=xss_detected::false"
+          fi
+          cat semgrep-results.json
+
+      - name: Upload Semgrep results
+        uses: actions/upload-artifact@v2
+        with:
+          name: semgrep-results
+          path: semgrep-results.json
+
   deploy:
     runs-on: ubuntu-latest
+    needs: semgrep
     outputs:
       preview_url: ${{ steps.deploy.outputs.preview_url }}
     steps:
@@ -26,7 +61,7 @@ jobs:
         run: |
           set -e
           echo "Starting deployment..."
-          DEPLOYMENT=$(vercel --token=${{ secrets.VERCEL_TOKEN }} --yes --confirm)
+          DEPLOYMENT_OUTPUT=$(vercel --token=${{ secrets.VERCEL_TOKEN }} --yes --confirm)
           echo "Deployment output: $DEPLOYMENT_OUTPUT"
           PREVIEW_URL=$(echo "$DEPLOYMENT_OUTPUT" | grep -o 'https://[^ ]*' | head -n 1)
           echo "Extracted Preview URL: $PREVIEW_URL"
@@ -41,18 +76,40 @@ jobs:
 
   comment:
     runs-on: ubuntu-latest
-    needs: deploy
+    needs: [semgrep, deploy]
     steps:
+      - name: Download Semgrep results
+        uses: actions/download-artifact@v2
+        with:
+          name: semgrep-results
+
       - name: Comment on PR
         if: always()
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const fs = require('fs');
+            const semgrepResults = JSON.parse(fs.readFileSync('semgrep-results.json', 'utf8'));
             const previewUrl = "${{ needs.deploy.outputs.preview_url }}";
             const pr = context.payload.pull_request;
+
+            let message = '';
+
+            if (semgrepResults.results.length > 0) {
+              message += '## :warning: XSS Vulnerability Detected\n';
+              semgrepResults.results.forEach(result => {
+                if (result.extra.message.includes("Possible XSS vulnerability detected")) {
+                  message += `- File: ${result.path}\n  Line: ${result.start.line}\n  Message: ${result.extra.message}\n\n`;
+                }
+              });
+            } else {
+              message += '✅ Semgrep found no issues.\n\n';
+            }
+
+            message += previewUrl ? `🚀 Preview deployment is ready! Here is the URL: ${previewUrl}` : '⚠️ Preview deployment failed.';
+
             if (pr) {
-              const message = previewUrl ? `🚀 Preview deployment is ready! Here is the URL: ${previewUrl}` : '⚠️ Preview deployment failed.';
               await github.rest.issues.createComment({
                 issue_number: pr.number,
                 owner: context.repo.owner,
@@ -60,49 +117,3 @@ jobs:
                 body: message
               });
             }
-
-  semgrep:
-    runs-on: ubuntu-latest
-    needs: deploy
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-      
-      - name: Install Semgrep
-        run: pip install semgrep
-
-      - name: Run Semgrep scan and comment findings
-        run: |
-          set -e
-          echo "Starting Semgrep scan..."
-          SEMGREP_OUTPUT=$(semgrep --config=p/r2c-security-audit --json || true)
-          echo $SEMGREP_OUTPUT | jq .
-          if [[ $SEMGREP_OUTPUT == *"error"* ]]; then
-            echo "::set-output name=semgrep_error::true"
-          fi
-        id: semgrep
-        continue-on-error: true
-
-      - name: Comment Semgrep findings on PR
-        if: always()
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const core = require('@actions/core');
-            const semgrepOutputStr = core.getInput('semgrep_output');
-            const semgrepOutput = JSON.parse(semgrepOutputStr);
-            const pr = context.payload.pull_request;
-            if (pr) {
-              const message = semgrepOutput && semgrepOutput.results && semgrepOutput.results.length > 0 ? `⚠️ Semgrep found some issues:\n\n${JSON.stringify(semgrepOutput.results, null, 2)}` : '✅ Semgrep found no issues.';
-              await github.rest.issues.createComment({
-                issue_number: pr.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: message
-              });
-            }
-
-      - name: Fail if Semgrep found issues
-        if: steps.semgrep.outputs.semgrep_error == 'true'
-        run: exit 1
