@@ -85,7 +85,8 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const semgrepOutput = JSON.parse("${{ steps.semgrep.outputs.semgrep_output }}");
+            const semgrepOutputStr = "${{ steps.semgrep.outputs.semgrep_output }}".replace(/"/g, "'");
+            const semgrepOutput = JSON.parse(semgrepOutputStr);
             const pr = context.payload.pull_request;
             if (pr) {
               const message = semgrepOutput && semgrepOutput.results && semgrepOutput.results.length > 0 ? `⚠️ Semgrep found some issues:\n\n${JSON.stringify(semgrepOutput.results, null, 2)}` : '✅ Semgrep found no issues.';
