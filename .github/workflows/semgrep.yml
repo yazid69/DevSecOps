@@ -1,9 +1,6 @@
 name: Vercel Preview Deployment with Semgrep
 
 on:
-  push:
-    branches-ignore:
-      - main
   pull_request:
     branches:
       - '*'
