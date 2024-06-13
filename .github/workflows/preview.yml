@@ -19,15 +19,17 @@ jobs:
       
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
-      
+
       - name: Deploy Project to Vercel
         id: deploy
         run: |
           set -e
           if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
+            echo "Simulating deployment for pull request"
             PREVIEW_URL="https://example-preview-url.vercel.app"
             echo "::set-output name=url::$PREVIEW_URL"
           else
+            echo "Starting actual deployment"
             DEPLOYMENT_OUTPUT=$(vercel --token=${{ secrets.VERCEL_TOKEN }} --yes --confirm)
             echo "Deployment output: $DEPLOYMENT_OUTPUT"
             PREVIEW_URL=$(echo "$DEPLOYMENT_OUTPUT" | grep -o 'https://[^ ]*')
@@ -54,7 +56,7 @@ jobs:
             const previewUrl = "${{ needs.deploy.outputs.preview_url }}";
             const pr = context.payload.pull_request;
             if (pr) {
-              const message = previewUrl ? `🚀 Preview deployment is ready! [Preview URL](${previewUrl})` : '⚠️ Preview deployment failed.';
+              const message = previewUrl ? `🚀 Preview deployment is ready! [Preview URL](${previewUrl})` : ' Preview deployment.';
               await github.rest.issues.createComment({
                 issue_number: pr.number,
                 owner: context.repo.owner,
