@@ -77,7 +77,8 @@ jobs:
           set -e
           echo "Starting Semgrep scan..."
           SEMGREP_OUTPUT=$(semgrep --config=p/r2c-security-audit --json || true)
-          echo "::set-output name=semgrep_output::$SEMGREP_OUTPUT"
+          SEMGREP_OUTPUT_ESCAPED=$(echo "$SEMGREP_OUTPUT" | sed 's/"/\\"/g')
+          echo "::set-output name=semgrep_output::$SEMGREP_OUTPUT_ESCAPED"
 
       - name: Comment Semgrep findings on PR
         if: always()
@@ -85,7 +86,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const semgrepOutputStr = JSON.stringify("${{ steps.semgrep.outputs.semgrep_output }}");
+            const semgrepOutputStr = "${{ steps.semgrep.outputs.semgrep_output }}";
             const semgrepOutput = JSON.parse(semgrepOutputStr);
             const pr = context.payload.pull_request;
             if (pr) {
