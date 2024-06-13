@@ -63,7 +63,6 @@ jobs:
 
   semgrep:
     runs-on: ubuntu-latest
-    needs: deploy
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -72,13 +71,14 @@ jobs:
         run: pip install semgrep
 
       - name: Run Semgrep scan
-        id: semgrep
-        run: |
-          set -e
-          echo "Starting Semgrep scan..."
-          SEMGREP_OUTPUT=$(semgrep --config=p/javascript-xss --json || true)
-          SEMGREP_OUTPUT_ESCAPED=$(echo "$SEMGREP_OUTPUT" | sed 's/"/\\"/g')
-          echo "::set-output name=semgrep_output::$SEMGREP_OUTPUT_ESCAPED"
+        run: semgrep --config=p/r2c-security-audit --json
+
+      - name: Upload Semgrep findings
+        if: failure()
+        uses: actions/upload-artifact@v2
+        with:
+          name: semgrep-results
+          path: semgrep-results.json
 
       - name: Comment Semgrep findings on PR
         if: always()
