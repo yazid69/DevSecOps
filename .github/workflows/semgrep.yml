@@ -26,7 +26,7 @@ jobs:
         run: |
           set -e
           echo "Starting deployment..."
-          DEPLOYMENT_OUTPUT=$(vercel --token=${{ secrets.VERCEL_TOKEN }} --yes --confirm)
+          DEPLOYMENT=$(vercel --token=${{ secrets.VERCEL_TOKEN }} --yes --confirm)
           echo "Deployment output: $DEPLOYMENT_OUTPUT"
           PREVIEW_URL=$(echo "$DEPLOYMENT_OUTPUT" | grep -o 'https://[^ ]*' | head -n 1)
           echo "Extracted Preview URL: $PREVIEW_URL"
@@ -76,7 +76,7 @@ jobs:
           set -e
           echo "Starting Semgrep scan..."
           SEMGREP_OUTPUT=$(semgrep --config=p/r2c-security-audit --json || true)
-          echo "::set-output name=semgrep_output::$SEMGREP_OUTPUT"
+          echo $SEMGREP_OUTPUT | jq .
           if [[ $SEMGREP_OUTPUT == *"error"* ]]; then
             echo "::set-output name=semgrep_error::true"
           fi
@@ -89,7 +89,8 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const semgrepOutputStr = JSON.stringify("${{ steps.semgrep.outputs.semgrep_output }}");
+            const core = require('@actions/core');
+            const semgrepOutputStr = core.getInput('semgrep_output');
             const semgrepOutput = JSON.parse(semgrepOutputStr);
             const pr = context.payload.pull_request;
             if (pr) {
