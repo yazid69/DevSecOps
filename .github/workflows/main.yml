@@ -1,7 +1,7 @@
 name: Vercel Production Deployment
 
 on:
-  push:
+  pull_request:
     branches:
       - main
 
@@ -38,22 +38,25 @@ jobs:
       
       - name: Log Production URL
         run: echo "Production URL is ${{ steps.deploy.outputs.production_url }}"
-        
+
   comment:
     runs-on: ubuntu-latest
     needs: deploy
     steps:
-      - name: Comment on Commit
+      - name: Comment on PR
+        if: always()
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const productionUrl = "${{ needs.deploy.outputs.production_url }}";
-            const commit = context.sha;
-            const message = productionUrl ? `🚀 Production deployment is ready! Here is the URL: ${productionUrl}` : '⚠️ Production deployment failed.';
-            await github.rest.repos.createCommitComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              commit_sha: commit,
-              body: message
-            });
+            const pr = context.payload.pull_request;
+            if (pr) {
+              const message = productionUrl ? `🚀 Production deployment is ready! Here is the URL: ${productionUrl}` : '⚠️ Production deployment failed.';
+              await github.rest.issues.createComment({
+                issue_number: pr.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: message
+              });
+            }
