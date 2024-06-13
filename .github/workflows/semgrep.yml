@@ -85,10 +85,10 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const semgrepOutput = "${{ steps.semgrep.outputs.semgrep_output }}";
+            const semgrepOutput = JSON.parse("${{ steps.semgrep.outputs.semgrep_output }}");
             const pr = context.payload.pull_request;
             if (pr) {
-              const message = semgrepOutput ? `⚠️ Semgrep found some issues:\n\n${semgrepOutput}` : '✅ Semgrep found no issues.';
+              const message = semgrepOutput && semgrepOutput.results && semgrepOutput.results.length > 0 ? `⚠️ Semgrep found some issues:\n\n${JSON.stringify(semgrepOutput.results, null, 2)}` : '✅ Semgrep found no issues.';
               await github.rest.issues.createComment({
                 issue_number: pr.number,
                 owner: context.repo.owner,
