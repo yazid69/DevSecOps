@@ -13,32 +13,47 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     outputs:
-      production_url: ${{ steps.get_url.outputs.url }}
+      production_url: ${{ steps.deploy.outputs.production_url }}
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
+
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
+
       - name: Deploy Project to Vercel
-        run: vercel --prod --token=${{ secrets.VERCEL_TOKEN }} --confirm
-      - name: Get Production URL
-        id: get_url
-        run: echo "::set-output name=url::$(vercel --token=${{ secrets.VERCEL_TOKEN }} list | grep 'Ready' | head -1 | awk '{print $2}')"
+        id: deploy
+        run: |
+          set -e
+          echo "Starting production deployment..."
+          DEPLOYMENT_OUTPUT=$(vercel --token=${{ secrets.VERCEL_TOKEN }} --prod --confirm)
+          echo "Deployment output: $DEPLOYMENT_OUTPUT"
+          PRODUCTION_URL=$(echo "$DEPLOYMENT_OUTPUT" | grep -o 'https://[^ ]*' | head -n 1)
+          echo "Extracted Production URL: $PRODUCTION_URL"
+          if [ -z "$PRODUCTION_URL" ]; then
+            echo "No production URL found in deployment output"
+            exit 1
+          fi
+          echo "::set-output name=production_url::$PRODUCTION_URL"
+      
+      - name: Log Production URL
+        run: echo "Production URL is ${{ steps.deploy.outputs.production_url }}"
 
   comment:
     runs-on: ubuntu-latest
     needs: deploy
     steps:
-      - name: Comment on commit
+      - name: Comment on Commit
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const sha = github.context.sha;
-            const url = `${{ needs.deploy.outputs.production_url }}`;
-            const message = `Production deployment is ready! [Production URL](${url})`;
-            github.rest.repos.createCommitComment({
+            const productionUrl = "${{ needs.deploy.outputs.production_url }}";
+            const commit = context.sha;
+            const message = productionUrl ? `🚀 Production deployment is ready! Here is the URL: ${productionUrl}` : '⚠️ Production deployment failed.';
+            await github.rest.repos.createCommitComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              commit_sha: sha,
-              body: '👋 Thank you for using git script!'
+              commit_sha: commit,
+              body: message
             });
