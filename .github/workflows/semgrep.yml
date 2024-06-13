@@ -71,12 +71,37 @@ jobs:
       - name: Install Semgrep
         run: pip install semgrep
 
-      - name: Run Semgrep scan
-        run: semgrep --config=p/r2c-security-audit --error
+      - name: Run Semgrep scan and comment findings
+        run: |
+          set -e
+          echo "Starting Semgrep scan..."
+          SEMGREP_OUTPUT=$(semgrep --config=p/r2c-security-audit --json || true)
+          echo "::set-output name=semgrep_output::$SEMGREP_OUTPUT"
+          if [[ $SEMGREP_OUTPUT == *"error"* ]]; then
+            echo "::set-output name=semgrep_error::true"
+          fi
+        id: semgrep
+        continue-on-error: true
 
-      - name: Upload Semgrep findings
-        if: failure()
-        uses: actions/upload-artifact@v2
+      - name: Comment Semgrep findings on PR
+        if: always()
+        uses: actions/github-script@v7
         with:
-          name: semgrep-results
-          path: semgrep-results.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const semgrepOutputStr = JSON.stringify("${{ steps.semgrep.outputs.semgrep_output }}");
+            const semgrepOutput = JSON.parse(semgrepOutputStr);
+            const pr = context.payload.pull_request;
+            if (pr) {
+              const message = semgrepOutput && semgrepOutput.results && semgrepOutput.results.length > 0 ? `⚠️ Semgrep found some issues:\n\n${JSON.stringify(semgrepOutput.results, null, 2)}` : '✅ Semgrep found no issues.';
+              await github.rest.issues.createComment({
+                issue_number: pr.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: message
+              });
+            }
+
+      - name: Fail if Semgrep found issues
+        if: steps.semgrep.outputs.semgrep_error == 'true'
+        run: exit 1
