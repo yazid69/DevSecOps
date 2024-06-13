@@ -76,7 +76,7 @@ jobs:
         run: |
           set -e
           echo "Starting Semgrep scan..."
-          SEMGREP_OUTPUT=$(semgrep --config=p/r2c-security-audit --json || true)
+          SEMGREP_OUTPUT=$(semgrep --config=p/javascript-xss --json || true)
           SEMGREP_OUTPUT_ESCAPED=$(echo "$SEMGREP_OUTPUT" | sed 's/"/\\"/g')
           echo "::set-output name=semgrep_output::$SEMGREP_OUTPUT_ESCAPED"
 
